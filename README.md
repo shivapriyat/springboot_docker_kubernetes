@@ -65,3 +65,6 @@ cleanup
 
 
 kubectl delete -f minikubeassets/person_deployment.yaml
+ 
+ 
+docker rmi springboot-k8s
