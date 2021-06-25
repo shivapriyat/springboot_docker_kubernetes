@@ -1,4 +1,4 @@
-Running Springboot with docker and Kubernetes
+Running Springboot with docker, kubernetes and ingress
 
 cd springboot_docker_kubernetes
 
