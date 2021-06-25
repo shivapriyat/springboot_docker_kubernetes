@@ -1,6 +1,11 @@
-Running Springboot with docker and Kubernetes
+Running Springboot with docker, kubernetes, ingress and helm
 
 cd springboot_docker_kubernetes
+
+
+
+// RENAME helmscripts FOLDER and use it as reference while executing below steps
+
 
 
 minikube start
@@ -31,28 +36,65 @@ docker build -t  springboot-k8s .
 docker image ls
 
 
-kubectl apply -f minikubeassets/person_deployment.yaml
+mkdir helmscripts
 
 
-kubectl apply -f minikubeassets/ingress.yaml
+cd helmscripts
 
+
+helm create springboothelm
+
+
+tree springboothelm
+
+
+edit values.yaml (image: repository: springboot-k8s tag: "latest"    and service port : 8080)
+
+
+edit templates/deployment.yaml  (containerPort: 8080 and comment  livenessProbe and readinessProbe sections )
+
+----
+Add Ingress
+
+helm repo add nginx-stable https://helm.nginx.com/stable
+
+helm repo update
+
+edit values.yaml (ingress enabled: true   className: "nginx"  - host: person.com   paths:  - path: /persons pathType: ImplementationSpecific)
+-----
+helm template springboothelm
+
+
+helm lint springboothelm
+
+
+helm install springboothelm --debug --dry-run springboothelm
+
+
+helm install springboothelmrelease springboothelm
+
+
+helm list -a
 
 
 kubectl get pods,svc,ingress
 
-pod/person-56884754b9-sg6lc                   1/1     Running   0          4m35s
+
+//results
+
+pod/springboothelmrelease-78f4b9c767-lhf2d   1/1     Running   0          34s
 
 
-service/person-service    ClusterIP   10.103.119.194   <none>        8080/TCP   4m35s
+service/springboothelmrelease   ClusterIP   10.99.23.35   <none>        8080/TCP   36s
 
 
-ingress.networking.k8s.io/person-ingress   <none>   person.com   192.168.49.2   80      4m22s
+ingress.networking.k8s.io/springboothelmrelease   nginx   person.com             80      36s
 
 
 //CHECK if Started Application line comes on executing the below command
 
 
- kubectl logs person-56884754b9-sg6lc
+ kubectl logs springboothelmrelease-78f4b9c767-lhf2d
 
 
  minikube ip
@@ -87,11 +129,7 @@ curl -X DELETE http://person.com/persons/3
 
 cleanup
 
-
-kubectl delete -f minikubeassets/person_deployment.yaml
-
-
-kubectl delete -f minikubeassets/ingress.yaml
+helm delete springboothelmrelease
 
 
 docker rmi springboot-k8s
