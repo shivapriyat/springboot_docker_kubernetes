@@ -1,6 +1,7 @@
 package com.example.springboot.controller;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -28,21 +29,25 @@ public class PersonController {
 	public String index() {
 		return "Greetings from Spring Boot!";
 	}*/
+	Logger log = Logger.getLogger("PersonController");
 	
 	@GetMapping("/persons")
 	public ResponseEntity getPersons() {
+		log.info("Request to get all persons");
 		List<Person> personList = personService.getAllPerson(); 
 		return ResponseEntity.status(HttpStatus.OK).body(personList);
 	}
 	
 	@PostMapping("/persons")
 	public ResponseEntity addPerson(@RequestBody Person person) {
+		log.info("Request to add new person with name: "+person.getFirstName());
 		Person p = personService.addNewPerson(person); 
 		return ResponseEntity.status(HttpStatus.OK).body(p);
 	}
 	
 	@PutMapping("/persons/{id}")
 	public ResponseEntity updatePerson(@RequestBody Person person,@PathVariable Integer id) {
+		log.info("Request to update person with name: "+person.getFirstName());
 		boolean isUpdated = personService.modifyPerson(person,id); 
 		if(isUpdated) {
 			return ResponseEntity.status(HttpStatus.OK).body("{\"msg\": \"Updated Successfully\"}");
@@ -53,6 +58,7 @@ public class PersonController {
 	}
 	@DeleteMapping("/persons/{id}")
 	public ResponseEntity deletePerson(@PathVariable Integer id) {
+		log.info("Request to delete person with id: "+ id );
 		boolean isFound = personService.deletePerson(id); 
 		if(!isFound) {
 			return ResponseEntity.status(HttpStatus.OK).body("{\"msg\": \"Deleted Successfully\"}");

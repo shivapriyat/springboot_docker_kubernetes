@@ -1,0 +1,159 @@
+apiVersion: v1
+kind: ServiceAccount
+kind: ConfigMap
+metadata:
+  name: fluentd-config
+  namespace: kube-logging
+data:
+  fluent.conf: |
+    # here we read the logs from Docker's containers and parse them
+    <source>
+      @type tail
+      #path /var/log/containers/*.log
+      path /var/log/pods/default_person*/**/*.log
+      pos_file /var/log/fluentd-containers.log.pos
+      tag kubernetes.*
+      read_from_head true
+      <parse>
+        @type json
+        time_format %Y-%m-%dT%H:%M:%S.%NZ
+      </parse>      
+    </source>
+
+    # we use kubernetes metadata plugin to add metadatas to the log
+    <filter kubernetes.**>
+        @type kubernetes_metadata
+    </filter>
+
+    #<filter kubernetes.**>
+        #@type grep
+        #<regexp>
+          #key message
+          #pattern /PersonController/
+        #</regexp>
+    #</filter>
+
+    # we send the logs to Elasticsearch
+    <match kubernetes.**>
+        @type elasticsearch
+        include_tag_key true
+        host "#{ENV['FLUENT_ELASTICSEARCH_HOST']}"
+        port "#{ENV['FLUENT_ELASTICSEARCH_PORT']}"
+        scheme "#{ENV['FLUENT_ELASTICSEARCH_SCHEME'] || 'http'}"
+        ssl_verify "#{ENV['FLUENT_ELASTICSEARCH_SSL_VERIFY'] || 'true'}"
+        reload_connections true
+        logstash_prefix logstash
+        logstash_format true
+        <buffer>
+            flush_thread_count 8
+            flush_interval 5s
+            chunk_limit_size 2M
+            queue_limit_length 32
+            retry_max_interval 30
+            retry_forever true
+        </buffer>
+    </match>
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluentd
+  namespace: kube-logging
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluentd
+  namespace: kube-logging
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: fluentd
+roleRef:
+  kind: ClusterRole
+  name: fluentd
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: fluentd
+  namespace: kube-logging
+---  
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd
+  namespace: kube-logging
+  labels:
+    k8s-app: fluentd-logging
+    version: v1
+    kubernetes.io/cluster-service: "true"
+spec:
+  selector:
+    matchLabels:
+      k8s-app: fluentd-logging
+      version: v1
+      kubernetes.io/cluster-service: "true"
+  template:
+    metadata:
+      labels:
+        k8s-app: fluentd-logging
+        version: v1
+        kubernetes.io/cluster-service: "true"
+    spec:
+      serviceAccount: fluentd
+      serviceAccountName: fluentd
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+      containers:
+      - name: fluentd
+        image: fluent/fluentd-kubernetes-daemonset:v1.4.2-debian-elasticsearch-1.1
+        env:
+          - name:  FLUENT_ELASTICSEARCH_HOST
+            value: "elasticsearch.kube-logging"
+          - name:  FLUENT_ELASTICSEARCH_PORT
+            value: "9200"
+          - name: FLUENT_ELASTICSEARCH_SCHEME
+            value: "http"
+          - name: FLUENT_UID
+            value: "0"
+          - name: FLUENT_ELASTICSEARCH_SED_DISABLE
+            value: "true"
+          - name: FLUENTD_SYSTEMD_CONF
+            value: disable  
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - name: fluentd-config
+          mountPath: /fluentd/etc
+        - name: varlog
+          mountPath: /var/log
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: fluentd-config
+        configMap:
+          name: fluentd-config 
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
