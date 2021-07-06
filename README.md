@@ -171,3 +171,5 @@ kubectl delete -f minikubeassets/kibana.yaml
 
 
 docker rmi springboot-k8s
+
+docker image ls
