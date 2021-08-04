@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: person
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: person
+  template:
+    metadata:
+      labels:
+        app: person
+      annotations:                               ### here
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "80"
+        prometheus.io/path: /actuator/prometheus  
+    spec:
+      containers:
+      - name: person
+        image: springboot-docker-k8s-monitoring
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          name: "http"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: person-service
+spec:
+  selector:
+    app: person
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    name: http

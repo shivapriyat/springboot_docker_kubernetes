@@ -1,5 +1,5 @@
-Add monitoring (Prometheus and Grafana) to spring boot as docker containers
-------------------------------------------------
+Add monitoring (Prometheus and Grafana) to spring boot K8S
+---------------------------------------------
 https://www.callicoder.com/spring-boot-actuator-metrics-monitoring-dashboard-prometheus-grafana/
 
 https://www.mokkapps.de/blog/monitoring-spring-boot-application-with-micrometer-prometheus-and-grafana-using-custom-metrics
@@ -36,33 +36,52 @@ In Prometheus link search for Person
 
 ----------------------------------------------------------------------------
 
-DOCKER SETUP
+K8S SETUP
 
-docker network create monitoring
+Updated pom.xml, application.properties, person_deployment.yaml, ingress.yaml , PersonController, and bean in Application.java
 
 mvn -U clean compile package
 
-docker build -t springboot-docker-monitoring .
+eval $(minikube docker-env)
+
+docker build -t springboot-docker-k8s-monitoring .
 
 docker image ls
 
-docker run --network monitoring --name persons-monitoring -p 8080:8080 -d springboot-docker-monitoring:latest
+kubectl apply -f minikubeassets/person_deployment.yaml
 
-docker pull prom/prometheus
+kubectl apply -f minikubeassets/ingress.yaml
 
-docker image ls
+kubectl get pod,svc,ingress
 
-docker network ls
+curl -X GET http://person.com/actuator/prometheus  and curl -X GET http://person.com/persons
 
-docker network inspect monitoring
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 
->>> Gateway 172.19.0.1 ",   >>>
+helm repo update
 
-edit prometheus.yml to point to Gateway address
+kubectl get pods -o wide
 
-docker run --network monitoring -v /home/priya/eclipse-workspace/may21/git/springboot_docker_kubernetes/src/main/resources/prometheus.yml:/etc/prometheus/prometheus.yml -p 9090:9090 -d prom/prometheus
+person-6cfd7ffc76-k7tt9                                        1/1     Running   0          150m   172.17.0.2    
 
-docker ps
+update the above IP in extraScrapeConfigs.yaml
+
+helm delete springboot-k8s-prometheus
+
+helm install -f minikubeassets/extraScrapeConfigs.yaml springboot-k8s-prometheus prometheus-community/kube-prometheus-stack
+
+update person_deployment.yaml
+
+kubectl delete -f minikubeassets/person_deployment.yaml
+
+kubectl delete -f minikubeassets/ingress.yaml
+
+kubectl apply -f minikubeassets/person_deployment.yaml
+
+kubectl apply -f minikubeassets/ingress.yaml
+
+Browser: http://person.com/targets
+
 
 -------------------------------------------------------------
 
