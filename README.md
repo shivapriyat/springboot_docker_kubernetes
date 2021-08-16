@@ -1,70 +1,125 @@
-Running Springboot with docker and Kubernetes
+Add monitoring (Prometheus and Grafana) to spring boot K8S
+---------------------------------------------
+https://www.callicoder.com/spring-boot-actuator-metrics-monitoring-dashboard-prometheus-grafana/
 
-cd springboot_docker_kubernetes
+https://www.mokkapps.de/blog/monitoring-spring-boot-application-with-micrometer-prometheus-and-grafana-using-custom-metrics
 
+https://www.tutorialworks.com/spring-boot-prometheus-micrometer/
 
-minikube start
+https://www.javadevjournal.com/spring-boot/spring-boot-actuator-with-prometheus/
 
+----------------------------------------------------------------
 
-eval $(minikube docker-env)
+update pom.xml and application.properties
 
+Build and Start application
 
 mvn -U clean compile package
 
+java -jar target/kubernetes01-1.jar
 
-//java -jar target/kubernetes01-1.jar
+Browser http://localhost:8080/actuator and http://localhost:8080/actuator/prometheus
 
+-------------------------------------------------------------------------
 
-docker build -t  springboot-k8s .
+Adding custom dependency in pom.xml, Application.java and Controller class
 
+Build start and execute get persons
+
+mvn -U clean compile package
+
+java -jar target/kubernetes01-1.jar
+
+Browser http://localhost:8080/persons and http://localhost:8080/actuator/prometheus
+
+In Prometheus link search for Person
+
+----------------------------------------------------------------------------
+
+K8S SETUP
+
+Updated pom.xml, application.properties, person_deployment.yaml, ingress.yaml , PersonController, and bean in Application.java
+
+mvn -U clean compile package
+
+eval $(minikube docker-env)
+
+docker build -t springboot-docker-k8s-monitoring .
 
 docker image ls
 
+kubectl apply -f minikubeassets/person_deployment.yaml
+
+kubectl apply -f minikubeassets/ingress.yaml
+
+kubectl get pod,svc,ingress
+
+curl -X GET http://person.com/actuator/prometheus  and curl -X GET http://person.com/persons
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+helm repo update
+
+kubectl get pods -o wide
+
+person-6cfd7ffc76-k7tt9                                        1/1     Running   0          150m   172.17.0.2    
+
+update the above IP in extraScrapeConfigs.yaml
+
+helm delete springboot-k8s-prometheus
+
+helm install -f minikubeassets/extraScrapeConfigs.yaml springboot-k8s-prometheus prometheus-community/kube-prometheus-stack
+
+update person_deployment.yaml
+
+kubectl delete -f minikubeassets/person_deployment.yaml
+
+kubectl delete -f minikubeassets/ingress.yaml
 
 kubectl apply -f minikubeassets/person_deployment.yaml
 
+kubectl apply -f minikubeassets/ingress.yaml
 
-kubectl get pods,svc
-
-// results example:
-
-pod/person-56884754b9-b7pk5                   1/1     Running   0          109s
+Browser: http://person.com/targets
 
 
+-------------------------------------------------------------
 
-service/person-service    LoadBalancer   10.108.98.124   <pending>     8080:30001/TCP   10s
+Grafana
+
+docker run -d --name=grafana -p 3000:3000 grafana/grafana
+
+wait for 2 min
+
+http://localhost:3000 admin/admin
+
+Under add datasource select prometheus inside grafana
+
+name=personsmonitoring
+
+url as http://172.19.0.1:9090
+
+Click Save and test button 
+
+and verify Data source is working as response
+
+Click + select dashboard > Add an empty panel
+
+From dropdown on right side which has default "timeseries" search and select "graph"
+
+Apply and save dashboard as "PersonsMonitoring"
+
+Click "Edit" under "Panel Title"
+
+Select "personsmonitoring" under Data source dropdown
+
+Under "metrics_browser" add String "getPersons_time_seconds_count" and select Apply
 
 
-//CHECK if Started Application line comes on executing the below command
 
-
- kubectl logs person-56884754b9-b7pk5
-
-
- minikube ip
-
- 192.168.49.2
-
-TESTING:
-
-
-
-curl -X GET http://192.168.49.2:30001/persons
-
-
-curl -X POST -H "Content-Type: application/json" --data '{"age": 30,"firstName":"Shivapriya", "lastName":"t"}' http://192.168.49.2:30001/persons
-
-
-curl -X PUT -H "Content-Type: application/json" --data '{"age": 28,"firstName":"Shivapriya", "lastName":"t"}' http://192.168.49.2:30001/persons/3
-
-
-curl -X DELETE http://192.168.49.2:30001/persons/3
-
-
-cleanup
-
-
-kubectl delete -f minikubeassets/person_deployment.yaml
  
- 
-docker rmi springboot-k8s
+
+
+
+
+

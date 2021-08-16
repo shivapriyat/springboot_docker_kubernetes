@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: person-ingress
+spec:
+  rules:
+  - host: person.com
+    http:
+      paths:
+      - backend:
+          serviceName: person-service
+          servicePort: 8080
+        path: /persons
+        pathType: Prefix
+      - backend:
+          serviceName: person-service
+          servicePort: 8080
+        path: /actuator
+        pathType: Prefix
+      - backend:
+          serviceName: springboot-k8s-prometheus-prometheus
+          servicePort: 9090
+        path: /
+        pathType: Prefix  
+

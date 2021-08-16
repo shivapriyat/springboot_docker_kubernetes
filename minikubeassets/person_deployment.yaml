@@ -11,10 +11,14 @@ spec:
     metadata:
       labels:
         app: person
+      annotations:                               ### here
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "80"
+        prometheus.io/path: /actuator/prometheus  
     spec:
       containers:
       - name: person
-        image: springboot-k8s
+        image: springboot-docker-k8s-monitoring
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -27,11 +31,8 @@ metadata:
 spec:
   selector:
     app: person
-  type: LoadBalancer
   ports:
   - protocol: TCP
     port: 8080
     targetPort: 8080
-    nodePort: 30001
     name: http
-
