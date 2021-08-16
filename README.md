@@ -9,6 +9,7 @@ https://www.tutorialworks.com/spring-boot-prometheus-micrometer/
 https://www.javadevjournal.com/spring-boot/spring-boot-actuator-with-prometheus/
 
 ----------------------------------------------------------------
+minikube start; minikube addons enable ingress ;minikube tunnel
 
 update pom.xml and application.properties
 
@@ -87,17 +88,34 @@ Browser: http://person.com/targets
 
 Grafana
 
-docker run -d --name=grafana -p 3000:3000 grafana/grafana
+
+Grafana is installed as part of the above stack:
+to get pwd
+kubectl get secret --namespace default springboot-k8s-prometheus-grafana -o jsonpath="{.data.admin-password}"
+
+>> cHJvbS1vcGVyYXRvcg==
+
+decoded online to "prom-operator"
+
+kubectl get pods
+
+>> springboot-k8s-prometheus-grafana-5b944478d8-z5xdx              2/2     Running   0          70m
+
+kubectl --namespace default port-forward springboot-k8s-prometheus-grafana-5b944478d8-z5xdx 3000
+
 
 wait for 2 min
 
-http://localhost:3000 admin/admin
+http://localhost:3000 admin/prom-operator
 
 Under add datasource select prometheus inside grafana
 
 name=personsmonitoring
 
-url as http://172.19.0.1:9090
+kubectl get svc
+springboot-k8s-prometheus-prometheus                 ClusterIP   10.108.55.206    <none>        9090/TCP 
+
+url as http://springboot-k8s-prometheus-prometheus:9090/
 
 Click Save and test button 
 
