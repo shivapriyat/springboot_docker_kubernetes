@@ -8,6 +8,10 @@ https://www.tutorialworks.com/spring-boot-prometheus-micrometer/
 
 https://www.javadevjournal.com/spring-boot/spring-boot-actuator-with-prometheus/
 
+
+https://medium.com/@at_ishikawa/install-prometheus-and-grafana-by-helm-9784c73a3e97
+
+
 ----------------------------------------------------------------
 minikube start; minikube addons enable ingress ;minikube tunnel
 
